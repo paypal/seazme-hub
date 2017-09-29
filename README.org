@@ -1,0 +1,21 @@
+** Usage
+
+*** Running
+
+=lein ring server=
+
+or
+
+=lein ring server-headless=
+
+
+*** Packaging and running as standalone jar
+
+#+BEGIN_SRC
+lein do clean, ring uberjar
+java -jar target/datahubserv.jar
+#+END_SRC
+
+*** Packaging as war
+
+=lein ring uberwar=
