@@ -4,7 +4,7 @@ Provide easy to use and extensible API for uploading information to datahub from
 
 datahub is aware of the source data type (e.g. Confluence, GitHub, etc), however after a simple validation, it stores the data in almost a raw format, while maintaining normalized metada about the sources. It is up to internal modules to process it further, e.g. to upload it to ES or perform certain analitics.
 
-In most cases, it is not possible to scan entire source at once and push the content in a single POST. Therefore, SQL like transaction model is followed where we PUT begin/insert/commit/rollbacl statements as resources for datahub to perform.
+In most cases, it is not possible to scan entire source at once and push the content in a single POST. Therefore, SQL like transaction model is followed where we PUT begin/insert/commit/rollback statements as resources for datahub to perform. In other words datahub's API models data intake process as opposed to simple ducuments upload capability.
 
 The datahub design follows "never delete" and "never update" http://www.datomic.com like paradim. Instead of meticulusly maintaining the "current" info, data is stored as a chain of "intake" events and transactions and all subsequent processing will be taken from there. That enables flexibility and openess for future changes as well.
 
@@ -12,9 +12,15 @@ The datahub design follows "never delete" and "never update" http://www.datomic.
 
 ** API key provisioning
 
-This action is to be performed by a person from a browser pointing at DataHub service itself, e.g. withing Swagger reviewer and tester. At that point the user is already SSO logged in and autheticated.
+This action is to be performed by a person from a browser pointing at DataHub service itself, e.g. withing Swagger reviewer and tester. At that point the user is already SSO logged in and authenticated. Using SSO (PP, Google, FB, etc) allows to avoid dealing with passwords directly.
 
-   [[/docs/create-user.png]]
+   [[/docs/create-apikey.png]]
+
+** application provisioning
+
+Once customer is autheticated, we request to apply for an application id. It is a context where all datahub operations are performed. In a way it is KYC. Results of that vetting process is communicated via email or could be polled using API itself.
+
+   [[/docs/create-application.png]]
 
 ** Full Scan
 
@@ -26,6 +32,5 @@ This action is to be performed by a person from a browser pointing at DataHub se
 
 * Open Questions:
 
-- how we approach it gathering data from GitHub?
+- how we approach gathering data from GitHub?
 - will gap detection be supported?
-
