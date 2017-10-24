@@ -8,6 +8,10 @@ In most cases, it is not possible to scan entire source at once and push the con
 
 The datahub design follows "never delete" and "never update" http://www.datomic.com like paradim. Instead of meticulusly maintaining the "current" info, data is stored as a chain of "intake" events and transactions and all subsequent processing will be taken from there. That enables flexibility and openess for future changes as well.
 
+Main actors in the system:
+   [[/docs/arch.png]]
+
+
 * Use cases
 
 ** API key provisioning
@@ -22,13 +26,13 @@ Once customer is autheticated, we request to apply for an application id. It is 
 
    [[/docs/create-application.png]]
 
-** Full Scan
+** Scan
 
-   [[/docs/full-scan.png]]
+   [[/docs/scan.png]]
 
-** Incremental Scan
+** Update
 
-   [[/docs/incremental-scan.png]]
+   [[/docs/update.png]]
 
 * Open Questions:
 
