@@ -4,7 +4,7 @@
             [schema.core :as s]
             [clj-uuid :as uuid]
             [ring.logger :as logger]
-            ))
+            [digest :as d]))
 
 (s/defschema Total {:id String (s/optional-key :total) Long :comment String})
 (s/defschema UpdateRange {:from Long :to Long})
@@ -22,13 +22,13 @@
         (-> (unauthorized)
             (header "WWW-Authenticate" "Basic realm=\"whatever\""))
 
-        (= auth-header "Basic .*")
+        (= (d/sha-1 auth-header) "f35ac389b36052259db0ba439cf3964302c9c849");; hack me: "Basic .*"
         (handler request)
 
         :else
         (unauthorized {})))))
 
-(def handler
+(defn handler[cm]
   (api
    {:swagger
     {:ui "/"
@@ -44,7 +44,7 @@
                                   {:type "basic"}}}}}
 
    (context "/v1" []
-            (context "/namespace-TBD" []
+            (context "/data-hub" []
                      (GET "/applications/apikey" []
                           :tags [:access]
                           :return {:Authorization String :comment String}
@@ -55,11 +55,11 @@
    (context "/v1" []
             ;;:header-params [apikey :- String]
             :middleware [authorized-for-docs?]
-            (context "/namespace-TBD" []
+            (context "/data-hub" []
                      (POST "/applications/intake" []
                            :tags [:access :intake]
                            :return {:id String :comment String}
-                           :query-params [description :- String, source_bussines_unit :- String, source_type :- String, source_instance :- String, email :- String]
+                           :query-params [description :- String, source_bussines_unit :- String, source_type :- String, source_instance :- String, email :- String, api-end :- String]
                            :summary "intake application registration async request"
                            (ok {:id (str (uuid/v4)) :comment wip}))
                      #_(POST "/applications/data-read" []
@@ -93,7 +93,7 @@
                           :tags [:system]
                           :return {:comment String s/Keyword s/Any}
                           :summary "current system status report"
-                          (ok {:comment wip}))
+                          (-> cm :status (apply nil)))
                      (POST "/intake-sessions" []
                            :tags [:intake]
                            :return {:id String :expires Long :comment String (s/optional-key :update-range) UpdateRange}
@@ -102,10 +102,10 @@
                            (ok {:id (str (uuid/v4)) :expires 0 :comment wip}))
                      (POST "/intake-sessions/:id/document" [id]
                            :tags [:intake]
-                           :body [json String]
+                           :body [json s/Any]
                            :return {:comment String}
                            :summary "document (e.g. page in Confluence) or any other atomic piece of data store"
-                           (ok {:comment wip}))
+                           (-> cm :POST-intake-sessions (apply id json nil)))
                      (POST "/intake-sessions/:id/submit" [id]
                            :tags [:intake]
                            :return {:comment String}
@@ -116,11 +116,6 @@
                            :return {:comment String}
                            :summary "session cancellation declaration, like SQL's \"ROLLBACK TRANSACTION\""
                            (ok {:comment wip}))
-                     (GET "/intake-sessions/:id/cancel" [id]
-                          :tags [:intake]
-                          :return {:comment String}
-                          :summary "session status"
-                          (ok {:comment wip}))
                      (GET "/analytics-dummy" []
                           :tags [:analytics]
                           :return {:comment String}
@@ -133,4 +128,4 @@
                           (ok {:comment wip}))
                      ))))
 
-(def app (-> handler logger/wrap-with-logger))
+(defn mk-app[callbacks-map] (-> (handler callbacks-map) logger/wrap-with-logger))
