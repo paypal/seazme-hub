@@ -1,6 +1,6 @@
 (ns seazme.hub.main
   (:require [seazme.hub.api :as a]
-            [seazme.hub.test :as service]))
+            [seazme.hub.biz :as service]))
 
 ;;https://github.com/derekchiang/Clojure-Watch for credentials
 (def app (a/mk-app

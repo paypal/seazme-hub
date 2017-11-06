@@ -1,0 +1,35 @@
+# Application Logging
+log4j.rootLogger=info, console, logrolling, email
+
+log4j.appender.logrolling=org.apache.log4j.RollingFileAppender
+log4j.appender.logrolling.File=./logrolling.out
+log4j.appender.logrolling.MaxFileSize=64MB
+log4j.appender.logrolling.MaxBackupIndex=128
+#log4j.appender.logrolling.Threshold=WARN
+log4j.appender.logrolling.layout=org.apache.log4j.PatternLayout
+log4j.appender.logrolling.layout.ConversionPattern=[%d][%p][%c] %m%n
+
+log4j.appender.logsimple=org.apache.log4j.FileAppender
+log4j.appender.logsimple.File=./logerror.out
+log4j.appender.logsimple.layout=org.apache.log4j.PatternLayout
+log4j.appender.logsimple.layout=org.apache.log4j.PatternLayout
+log4j.appender.logsimple.layout.ConversionPattern=[%d][%p][%c] %m%n
+
+log4j.appender.console=org.apache.log4j.ConsoleAppender
+log4j.appender.console.layout=org.apache.log4j.PatternLayout
+log4j.appender.console.layout.ConversionPattern=%-4r [%t] %-5p %c %x - %m%n
+
+log4j.appender.email=org.apache.log4j.net.SMTPAppender
+#python /usr/lib/python2.7/smtpd.py -d  -n -c PureProxy 0.0.0.0:8025 #.#.#.#:25
+log4j.appender.email.SMTPHost=#.#.#.#
+#log4j.appender.email.SMTPPort=8025
+#log4j.appender.email.SMTPUsername=user@mydomain.com
+#log4j.appender.email.SMTPPassword=pwd
+log4j.appender.email.From=noreply-team@mydomain.com
+log4j.appender.email.To=team@mydomain.com
+log4j.appender.email.Subject=Hub monitoring
+log4j.appender.email.BufferSize=128
+#log4j.appender.email.EvaluatorClass=TriggerLogEvent
+#log4j.appender.email.Threshold=WARN
+log4j.appender.email.layout=org.apache.log4j.PatternLayout
+log4j.appender.email.layout.ConversionPattern=%m
