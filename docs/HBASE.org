@@ -1,0 +1,85 @@
+* Design priciples:
+
+ - add only, never delete, never update
+ - or upsert only in some cases
+ - meta: apikey:user appid, ts ...
+ - CF with "table name" or "self" (like in Python :-) )
+ - CF with meta
+ - CF since all is immutable, we can always have a copy
+ - uuid is unique accross machines
+ - UTC for formatted timestamps (I know it is not human readable, but machine redability counts too :-) )
+
+
+* Tables
+
+#+BEGIN_SRC
+
+common:
+    meta=meta(id, key, created, headers, comment)
+
+apps: ;list of all integrations
+  uuid:
+      self: expires, description, kind, bu, instance, notification-contacts[email/sms/slack], base-url, <meta>
+
+intake-sessions: ;fast scan by time
+  ts/uuid(|/submit|/cancel):
+      self: expires, command:scan/update, ?count (for submit), description, time-span, time-offset, range, <meta>
+      app: <copy-of-apps>
+
+intake-data: ;fast scan by session (or session with 00-FF(or higer) prefix for better use of regions)
+  256based-random-2digit-hex/uuid/path:
+      self: payload, type, <meta>
+      app: <copy-of-apps>
+      session: <copy-of-session>
+
+#+END_SRC
+
+upload-sessions:
+
+upload-snapshots: (instead of es , es target qualifier)
+
+
+* Scripts
+
+#+BEGIN_SRC
+
+list 'datahub:.*'
+
+scan "datahub:apps"
+
+truncate 'datahub:apps'
+truncate 'datahub:intake-sessions'
+truncate 'datahub:intake-data'
+
+count 'datahub:intake-data', INTERVAL => 1000000
+scan 'datahub:intake-data', {'LIMIT' => 5}
+
+disable 'datahub:intake-sessions'
+enable 'datahub:intake-sessions'
+disable 'datahub:intake-data'
+enable 'datahub:intake-data'
+
+disable 'datahub:intake-sessions'
+drop 'datahub:intake-sessions'
+disable 'datahub:intake-data'
+drop 'datahub:intake-data'
+
+create 'datahub:apps', 'self'
+create 'datahub:intake-sessions', 'self', 'app'
+create 'datahub:intake-data', 'self', 'app', 'session'
+
+
+print "rename datahub:intake-sessions\n"
+disable 'datahub:intake-sessions'
+snapshot 'datahub:intake-sessions', 'intake-sessions-snap'
+clone_snapshot 'intake-sessions-snap', 'datahub:intake-sessions-1'
+drop 'datahub:intake-sessions'
+print "ask admins to run below\n"
+delete_snapshot 'intake-sessions-snap'
+
+#+END_SRC
+
+* Resources
+ - similar to http://opentsdb.net/docs/build/html/user_guide/backends/hbase.html
+ - http://hbase.apache.org/book.html#rowkey.design - critical
+ - http://hadooptutorial.info/hbase-shell-commands-in-practice/
