@@ -1,0 +1,26 @@
+mkdir /etc/nginx/ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt
+
+
+
+server {
+        server_name api-server.domain.com;
+        listen 443 ssl;
+        ssl_certificate /etc/nginx/ssl/nginx.crt;
+        ssl_certificate_key /etc/nginx/ssl/nginx.key;
+        client_max_body_size 64M;
+
+        location / {
+                proxy_set_header   X-Real-IP $remote_addr;
+                proxy_set_header   Host      $http_host;
+                proxy_pass         http://127.0.0.1:3000;
+        }
+}
+server {
+        listen 80 default_server;
+        server_name api-server.domain.com;
+        listen [::]:80 default_server;
+        server_name _;
+        access_log off;
+        return 301 https://$host$request_uri;
+}

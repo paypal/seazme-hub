@@ -1,0 +1,116 @@
+* Design priciples:
+
+ - add only, never delete, never update
+ - or upsert only in some cases
+ - meta: apikey:user appid, ts ...
+ - CF with "table name" or "self" (like in Python :-) )
+ - CF with meta
+ - CF since all is immutable, we can always have a copy
+ - uuid is unique accross machines
+ - UTC for formatted timestamps (I know it is not human readable, but machine redability counts too :-) )
+
+
+* Tables
+
+
+
+common:
+     meta=meta(id,key,created,apikey,comment)
+
+apps:
+ uuid -> CF:
+            self(effective(generated), expiration(requested), contacts[email/sms/slack], description, kind, bu, instance, index-prefix, <meta>)
+
+inital entry Clojure snippet: main:password
+
+intake-sessions: fast scan by time
+ ts/uuid -> CF:
+            self(command:begin/commit/cancel, ?count (for submit),<meta>)
+            app(copy of apps)
+
+
+intake-data: fast scan by session (or session with 00-FF(or higer) prefix for better use of regions)
+ 256hex-random/uuid/path -> CF:
+            self(payload, url, [path], ts (of doc), API-username-service-account) ;;TODO add original URL
+            app(copy)
+            session(copy)
+
+TODO: explain how payload is verified for specific app
+TODO: multiple paths, tags, categories
+TODO: rename intake-data intake-documents and intake-graphs
+
+upload-sessions:
+
+upload-snapshots: (instead of es , es target qualifier)
+
+
+* Scripts
+
+#+BEGIN_SRC
+
+list 'datahub:.*'
+
+scan "datahub:apps"
+
+truncate 'datahub:apps'
+truncate 'datahub:intake-sessions'
+truncate 'datahub:intake-data'
+
+count 'datahub:intake-data', INTERVAL => 1000000
+scan 'datahub:intake-data', {'LIMIT' => 5}
+
+disable 'datahub:intake-sessions'
+enable 'datahub:intake-sessions'
+disable 'datahub:intake-data'
+enable 'datahub:intake-data'
+
+disable 'datahub:intake-sessions'
+drop 'datahub:intake-sessions'
+disable 'datahub:intake-data'
+drop 'datahub:intake-data'
+
+create 'datahub:apps', 'self'
+create 'datahub:intake-sessions', 'self', 'app'
+create 'datahub:intake-data', 'self', 'app', 'session'
+
+
+print "rename datahub:intake-sessions\n"
+disable 'datahub:intake-sessions'
+snapshot 'datahub:intake-sessions', 'intake-sessions-snap'
+clone_snapshot 'intake-sessions-snap', 'datahub:intake-sessions-1'
+drop 'datahub:intake-sessions'
+print "ask admins to run below\n"
+delete_snapshot 'intake-sessions-snap'
+
+#+END_SRC
+
+* (REPL) Procedures
+#+BEGIN_SRC
+;; extracting specific sessions
+(def fs (find-sessions "16246a91f02"))
+(def fs2 (->> ps (filter (comp (partial = "e6a1c4f0-2792-11e8-8178-4f6e83cbd595") :id :meta :app second)) (filter (comp (partial = "confluence") :kind :app second))  (filter (comp (partial = "submit") :action :meta :self second))))
+(defn some-fields[e] [(clojure.string/join "/" (-> e second :app (select-keys [:bu :instance :kind]) vals)) (-> e second :self :meta :tsx) (-> e second :self :meta :tsx (Long/parseLong 16) c/from-long c/to-string) (-> e second :self :meta :created c/from-long c/to-string) (-> e second :self :range :from c/from-long c/to-string)])
+(binding [clojure.pprint/*print-right-margin* 200 ] (->> fs (map some-fields) (group-by first) pprint))
+
+;; session real count
+(defn session-count[session-id pref] (->> (hb/scan* "datahub:intake-data" :starts-with (strpref "\\" session-id) :lazy? true) count))
+(->> prefixes (pmap (partial session-count "4f2a62f0-127d-11e8-9329-4f6e83cbd595")) (reduce +)
+
+;; base64
+(import 'java.util.Base64)
+(->> "abcdefg" (into-array Byte/TYPE) (.encodeToString (Base64/getEncoder)))
+(->> (.decode (Base64/getDecoder) "YWJjZGVmZw==") (map char) (clojure.string/join ""))
+(->> "FDpVY9pd" (into-array Byte/TYPE) (.encodeToString (Base64/getEncoder)))
+(->> "abcdefg" (into-array Byte/TYPE) (.encodeToString (Base64/getEncoder)))
+
+;; delete bad sessions
+(find-by @hb/con  "datahub:intake-sessions" "1624fc6f786\\5fa5ad30-2e1e-11e8-ab94-4f6e83cbd595\\submit")
+(delete @hb/con  "datahub:intake-sessions" "1624fc6f786\\5fa5ad30-2e1e-11e8-ab94-4f6e83cbd595\\submit")
+(def fs (find-sessions "16246a91f02"))
+(pprint fs)
+#+END_SRC
+
+* Resources
+ - similar to http://opentsdb.net/docs/build/html/user_guide/backends/hbase.html
+ - http://hbase.apache.org/book.html#rowkey.design - critical
+ - http://hadooptutorial.info/hbase-shell-commands-in-practice/
