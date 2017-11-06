@@ -14,7 +14,7 @@ Main actors in the system:
 
 * Use cases
 
-** API key provisioning
+** API key provisioning (not implemented)
 
 This action is to be performed by a person from a browser pointing at DataHub service itself, e.g. withing Swagger reviewer and tester. At that point the user is already SSO logged in and authenticated. Using SSO (PP, Google, FB, etc) allows to avoid dealing with passwords directly.
 
