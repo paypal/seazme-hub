@@ -1,20 +1,27 @@
-(ns seazme.hub.api.handler
+(ns seazme.hub.api
   (:require [compojure.api.sweet :refer :all]
             [ring.util.http-response :refer :all]
             [schema.core :as s]
-            [clj-uuid :as uuid]
+            [clj-time.coerce :as co]
             [ring.logger :as logger]
             [digest :as d]))
 
-(s/defschema Total {:id String (s/optional-key :total) Long :comment String})
+;;(s/defschema Total {:id String (s/optional-key :total) Long :comment String})
 (s/defschema UpdateRange {:from Long :to Long})
 
 
+;;TODO convert to "(resource" https://github.com/metosin/compojure-api-examples/blob/master/src/compojure/api/examples/handler.clj vs https://github.com/metosin/compojure-api/blob/master/examples/resources/src/example/handler.clj
+
 ;;TODO define , :id #"[0-9]+"
+;;TODO https://stackoverflow.com/questions/46288109/how-to-stream-a-large-csv-response-from-a-compojure-api-so-that-the-whole-respon
 
 (def wip "wip: API response may not be fully defined yet")
 
-(defn authorized-for-docs? [handler]
+(def wip-return {:comment String s/Keyword s/Any})
+
+(defmacro mk-datahub-handler [cm op & args] `(fn [~'req] (-> ~cm ~op (apply ~op (select-keys (~'req :headers) ["apikey" "x-real-ip"]) ~@args nil))))
+
+(defn authorized-for-docs? [hashed-passwords handler]
   (fn [request]
     (let [auth-header (get (:headers request) "authorization")]
       (cond
@@ -22,13 +29,18 @@
         (-> (unauthorized)
             (header "WWW-Authenticate" "Basic realm=\"whatever\""))
 
-        (= (d/sha-1 auth-header) "f35ac389b36052259db0ba439cf3964302c9c849");; hack me: "Basic .*"
+        (contains? hashed-passwords (d/sha-1 auth-header))
         (handler request)
 
         :else
         (unauthorized {})))))
 
-(defn handler[cm]
+;consider instead of comment
+;;"errors": {
+;;           "id": "missing-required-key"
+;;           }
+
+(defn handler[hashed-passwords cm]
   (api
    {:swagger
     {:ui "/"
@@ -44,34 +56,37 @@
                                   {:type "basic"}}}}}
 
    (context "/v1" []
-            (context "/data-hub" []
+            (context "/datahub" []
                      (GET "/applications/apikey" []
                           :tags [:access]
-                          :return {:Authorization String :comment String}
+                          :query-params [name :- String, contacts :- String, description :- String]
+                          ;;contacts is structures list of email,SMS,Slack,etc
+                          :return {:id String :comment String}
                           :summary "This is experimental: generates API basic auth (or other) key after completing SSO (PP, Google, FB, etc) based authetication. Otherwise, apikey are provisioned manually."
-                          (ok {:Authorization (str (uuid/v4)) :comment wip}))
+                          (ok {:apikey wip :comment wip}))
                      )
             )
-   (context "/v1" []
-            ;;:header-params [apikey :- String]
-            :middleware [authorized-for-docs?]
-            (context "/data-hub" []
+   ;;TODO difference between [:r :- String] and {:r String}
+   (context "/v1" [:as rr]
+            :header-params [apikey :- String]
+            :middleware [(partial authorized-for-docs? hashed-passwords)]
+            (context "/datahub" []
                      (POST "/applications/intake" []
                            :tags [:access :intake]
                            :return {:id String :comment String}
-                           :query-params [description :- String, source_bussines_unit :- String, source_type :- String, source_instance :- String, email :- String, api-end :- String]
+                           :query-params [description :- String, bu :- String, kind :- String, instance :- String, notification_contacts :- String, api_end :- String, index_prefix :- String]
                            :summary "intake application registration async request"
-                           (ok {:id (str (uuid/v4)) :comment wip}))
+                           (mk-datahub-handler cm :POST-applications-intake description bu kind instance notification_contacts api_end index_prefix))
                      #_(POST "/applications/data-read" []
                            :tags [:access :data-read]
-                           :return {:comment String}
-                           :query-params [description :- String, email :- String]
+                           :return wip-return
+                           :query-params [description :- String email :- String]
                            :summary "data-read application registration async request"
                            (ok {:comment wip}))
                      (POST "/applications/analytics" []
                            :tags [:access :analytics]
-                           :return {:comment String}
-                           :query-params [description :- String, email :- String]
+                           :return wip-return
+                           :query-params [description :- String email :- String]
                            :summary "analytics application registration async request"
                            (ok {:comment wip}))
                      (GET "/applications/:id" [id]
@@ -86,46 +101,47 @@
                           (ok {:ids [] :comment wip}))
                      (POST "/applications/:id/deactivate" [id]
                            :tags [:access]
-                           :return {:comment String}
+                           :return wip-return
                            :summary "application deactivation"
                            (ok {:comment wip}))
                      (GET "/status" []
                           :tags [:system]
-                          :return {:comment String s/Keyword s/Any}
+                          :return wip-return
                           :summary "current system status report"
-                          (-> cm :status (apply nil)))
+                          (mk-datahub-handler cm :status))
                      (POST "/intake-sessions" []
                            :tags [:intake]
-                           :return {:id String :expires Long :comment String (s/optional-key :update-range) UpdateRange}
-                           :query-params [description :- String, incremental :- Boolean]
+                           :return {:key String :expires Long :command String :comment String :range {:from Long :to Long}}
+                           :query-params [app-id :- String command :- String description :- String]
                            :summary "document intake session begin, like SQL's \"BEGIN TRANSACTION\""
-                           (ok {:id (str (uuid/v4)) :expires 0 :comment wip}))
+                           (mk-datahub-handler cm :POST-intake-sessions app-id command description))
                      (POST "/intake-sessions/:id/document" [id]
                            :tags [:intake]
-                           :body [json s/Any]
-                           :return {:comment String}
+                           :body [payload s/Any]
+                           :return wip-return
                            :summary "document (e.g. page in Confluence) or any other atomic piece of data store"
-                           (-> cm :POST-intake-sessions (apply id json nil)))
-                     (POST "/intake-sessions/:id/submit" [id]
-                           :tags [:intake]
-                           :return {:comment String}
-                           :summary "sucesfull session end declaration, like SQL's \"COMMIT TRANSACTION\""
-                           (ok {:comment wip}))
+                           (mk-datahub-handler cm :POST-intake-sessions-_-document id payload))
                      (POST "/intake-sessions/:id/cancel" [id]
                            :tags [:intake]
-                           :return {:comment String}
+                           :return wip-return
                            :summary "session cancellation declaration, like SQL's \"ROLLBACK TRANSACTION\""
-                           (ok {:comment wip}))
+                           (mk-datahub-handler cm :POST-intake-sessions-_-cancel id))
+                     (POST "/intake-sessions/:id/submit" [id]
+                           :tags [:intake]
+                           :return wip-return
+                           :query-params [count :- Long]
+                           :summary "sucesfull session end declaration, like SQL's \"COMMIT TRANSACTION\""
+                           (mk-datahub-handler cm :POST-intake-sessions-_-submit id count))
                      (GET "/analytics-dummy" []
                           :tags [:analytics]
-                          :return {:comment String}
+                          :return wip-return
                           :summary "To be developed. (dummy get exists in order to show up this context in swagger ui.)"
                           (ok {:comment wip}))
                      #_(GET "/dummy" []
                           :tags [:data-read]
-                          :return {:comment String}
+                          :return wip-return
                           :summary "To be developed. (dummy get exists in order to show up this context in swagger ui.)"
                           (ok {:comment wip}))
                      ))))
 
-(defn mk-app[callbacks-map] (-> (handler callbacks-map) logger/wrap-with-logger))
+(defn mk-app[hashed-passwords callbacks-map] (-> (handler hashed-passwords callbacks-map) logger/wrap-with-logger))

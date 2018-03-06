@@ -1,5 +1,17 @@
 ** Usage
 
+*** Prerequisites
+
+- Git
+- Most recent Java 8 JDK
+- *[[https://leiningen.org][Leiningen]]* Clojure build tool
+
+*** Demo
+
+This repo maintains an =api= branch which when checked out, and started (as below), runs hub in demo mode and no calls to backend are executed. Username and password are =open= and =seazme=.
+
+Please note, that in order to achieve that level of separation, all api changes must be carefully placed on top of =api= branch. Then =master= branch must be rebased on top of it.
+
 *** Running
 
 =lein ring server=
@@ -7,7 +19,6 @@
 or
 
 =lein ring server-headless=
-
 
 *** Packaging and running as standalone jar
 
