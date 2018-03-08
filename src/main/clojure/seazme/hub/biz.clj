@@ -109,7 +109,7 @@
   (if-let [app-cf (hb/find-by* "datahub:apps" app-id self-cf-name)]
    (let [id (str (uuid/v1))
          jts (jts-now)
-         session-key (format "%s\\%s" (format "%010x" (jts-now)) id);;should be good till "2525-06-07T12:18:37.938Z"
+         session-key (format "%s\\%s" (format "%010x" (jts-now)) id);;should be good till "2525-06-07T12:18:37.938Z" TODO "1620c70b81f\\0699"
          kind (:kind app-cf)
          past-sessions  (delay (->> (hb/scan* "datahub:intake-sessions" :reverse? true :lazy? true)
                                     (filter (comp (partial = app-id) :id :meta :app second))
@@ -144,18 +144,18 @@
     ))
 
 
-(defn POST-intake-sessions-_-document[op headers session-id payload]
-  (log/info op headers session-id (count payload))
+(defn POST-intake-sessions-_-document[op headers session-key payload]
+  (log/info op headers session-key (count payload))
   ;;TODO find better way to find multiple CF
   ;;TODO check if cancel/submit and/or expired
-  (if-let [self-cf (hb/find-by* "datahub:intake-sessions" session-id self-cf-name)]
-    (if-let [app-cf (hb/find-by* "datahub:intake-sessions" session-id app-cf-name)]
+  (if-let [self-cf (hb/find-by* "datahub:intake-sessions" session-key self-cf-name)]
+    (if-let [app-cf (hb/find-by* "datahub:intake-sessions" session-key app-cf-name)]
       (let [path (get-path-from-doc (-> app-cf :kind) payload);;TODO verify path
             jts (jts-now)
-            id (-> self-cf :meta :id)
-            document-key (format "%02x\\%s\\%s" (rand-int 256) id path) ;;256 is hardcoded constant forever!
+            session-id (-> self-cf :meta :id)
+            document-key (format "%02x\\%s\\%s" (rand-int 256) session-id path) ;;256 is hardcoded constant forever!
             document-meta {:headers headers
-                           :id id
+                           :session {:id session-id :key session-key}
                            :key document-key
                            :created jts
                            :comment "the document has been posted"}]
@@ -167,22 +167,23 @@
     (not-found {:comment "self not found"}))
   )
 
-(defn POST-intake-sessions-_-cancel[op headers session-id]
+(defn POST-intake-sessions-_-cancel[op headers session-key]
   ;;TODO - check if session already canceled
-  (log/info op headers session-id)
-  (if-let [self-cf (hb/find-by* "datahub:intake-sessions" session-id self-cf-name)]
-    (if-let [app-cf (hb/find-by* "datahub:intake-sessions" session-id app-cf-name)]
+  (log/info op headers session-key)
+  (if-let [self-cf (hb/find-by* "datahub:intake-sessions" session-key self-cf-name)]
+    (if-let [app-cf (hb/find-by* "datahub:intake-sessions" session-key app-cf-name)]
       (let [action "cancel"
             jts (jts-now)
-            session-key (format "%s\\%s" session-id action)
+            session-id (-> self-cf :meta :id)
+            session-action-key (format "%s\\%s" session-key action)
             session-meta {:headers headers
                           :id session-id
-                          :key session-key
+                          :key session-action-key
                           :created jts
                           :comment "the session has been canceled"
                           :action action}]
-        (hb/store* "datahub:intake-sessions" session-key self-cf-name (assoc self-cf :meta session-meta))
-        (hb/store* "datahub:intake-sessions" session-key app-cf-name app-cf)
+        (hb/store* "datahub:intake-sessions" session-action-key self-cf-name (assoc self-cf :meta session-meta))
+        (hb/store* "datahub:intake-sessions" session-action-key app-cf-name app-cf)
         (ok (select-keys session-meta [:comment]))
         )
       (not-found {:comment "app not found"}))
@@ -191,21 +192,22 @@
 
 ;;TODO - issue warning if there no documents/graphs uploaded
 ;;TODO - check if session already submitted
-(defn POST-intake-sessions-_-submit[op headers session-id count2]
-  (log/info op headers session-id count2)
-  (if-let [self-cf (hb/find-by* "datahub:intake-sessions" session-id self-cf-name)]
-    (if-let [app-cf (hb/find-by* "datahub:intake-sessions" session-id app-cf-name)]
+(defn POST-intake-sessions-_-submit[op headers session-key count2]
+  (log/info op headers session-key count2)
+  (if-let [self-cf (hb/find-by* "datahub:intake-sessions" session-key self-cf-name)]
+    (if-let [app-cf (hb/find-by* "datahub:intake-sessions" session-key app-cf-name)]
       (let [action "submit"
             jts (jts-now)
-            session-key (format "%s\\%s" session-id action)
+            session-id (-> self-cf :meta :id)
+            session-action-key (format "%s\\%s" session-key action)
             session-meta {:headers headers
                           :id session-id
-                          :key session-key
+                          :key session-action-key
                           :created jts
                           :comment "the session has been submitted"
                           :action action}]
-        (hb/store* "datahub:intake-sessions" session-key self-cf-name (assoc self-cf :count count2 :meta session-meta))
-        (hb/store* "datahub:intake-sessions" session-key app-cf-name app-cf)
+        (hb/store* "datahub:intake-sessions" session-action-key self-cf-name (assoc self-cf :count count2 :meta session-meta))
+        (hb/store* "datahub:intake-sessions" session-action-key app-cf-name app-cf)
         (ok (select-keys session-meta [:comment]))
         )
       (not-found {:comment "app not found"}))
