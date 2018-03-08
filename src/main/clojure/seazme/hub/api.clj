@@ -115,23 +115,23 @@
                            :query-params [app-id :- String command :- String description :- String]
                            :summary "document intake session begin, like SQL's \"BEGIN TRANSACTION\""
                            (mk-datahub-handler cm :POST-intake-sessions app-id command description))
-                     (POST "/intake-sessions/:id/document" [id]
+                     (POST "/intake-sessions/:key/document" [key]
                            :tags [:intake]
                            :body [payload s/Any]
                            :return wip-return
                            :summary "document (e.g. page in Confluence) or any other atomic piece of data store"
-                           (mk-datahub-handler cm :POST-intake-sessions-_-document id payload))
-                     (POST "/intake-sessions/:id/cancel" [id]
+                           (mk-datahub-handler cm :POST-intake-sessions-_-document key payload))
+                     (POST "/intake-sessions/:key/cancel" [key]
                            :tags [:intake]
                            :return wip-return
                            :summary "session cancellation declaration, like SQL's \"ROLLBACK TRANSACTION\""
-                           (mk-datahub-handler cm :POST-intake-sessions-_-cancel id))
-                     (POST "/intake-sessions/:id/submit" [id]
+                           (mk-datahub-handler cm :POST-intake-sessions-_-cancel key))
+                     (POST "/intake-sessions/:key/submit" [key]
                            :tags [:intake]
                            :return wip-return
                            :query-params [count :- Long]
                            :summary "sucesfull session end declaration, like SQL's \"COMMIT TRANSACTION\""
-                           (mk-datahub-handler cm :POST-intake-sessions-_-submit id count))
+                           (mk-datahub-handler cm :POST-intake-sessions-_-submit key count))
                      (GET "/analytics-dummy" []
                           :tags [:analytics]
                           :return wip-return
