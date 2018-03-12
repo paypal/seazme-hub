@@ -74,9 +74,9 @@
                      (POST "/applications/intake" []
                            :tags [:access :intake]
                            :return {:id String :comment String}
-                           :query-params [description :- String, bu :- String, kind :- String, instance :- String, notification_contacts :- String, api_end :- String, index_prefix :- String]
+                           :query-params [description :- String, kind :- String, bu :- String, instance :- String, notification_contacts :- String, base_url :- String]
                            :summary "intake application registration async request"
-                           (mk-datahub-handler cm :POST-applications-intake description bu kind instance notification_contacts api_end index_prefix))
+                           (mk-datahub-handler cm :POST-applications-intake description kind bu instance notification_contacts base_url))
                      #_(POST "/applications/data-read" []
                            :tags [:access :data-read]
                            :return wip-return

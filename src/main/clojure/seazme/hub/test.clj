@@ -26,8 +26,8 @@
   )
 
 ;;TODO update description and seq diagrams
-(defn POST-applications-intake[op headers description bu kind instance notification_contacts api_end index_prefix]
-  (log/info op headers description bu kind instance notification_contacts api_end index_prefix)
+(defn POST-applications-intake[op headers description kind bu instance notification_contacts base_url]
+  (log/info op headers description kind bu instance notification_contacts base_url)
   (ok {:id (str (uuid/v4)) :comment wip})
   )
 
