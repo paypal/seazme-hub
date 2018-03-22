@@ -12,8 +12,10 @@
 ;;
 (def app-cf-name :app)
 (def self-cf-name :self)
-(def update-interval (* 15 60 1000))
 
+(def time-span   (* 1000 60 60 24))
+(def time-offset (* 1000 60 15))
+(defn next-to[to] (* (quot (+ to time-span) time-span) time-span))
 
 ;;
 ;; those are constants per API version, never change in mid-flight
@@ -85,17 +87,23 @@
   (if (empty? @past-sessions)
     [bad-request {} "no prior submission or initial scan in progress"]
     (let [to (-> @past-sessions first second :self :range :to)
-          next-to (* (quot (+ to update-interval) update-interval) update-interval)
-          _ (prn (> next-to jts) jts to next-to)]
-      (if (> next-to jts)
-        [accepted
-         {}
-         (format "cannot create session for future updates, try in %d minutes, perfectly good for a cup of tea" (quot (- next-to jts) (* 1000 60)))]
+          nto (next-to to)
+          behind-time (- jts nto time-offset)]
+      (if (neg? behind-time)
+        (let [try-again-in (quot (- behind-time) (* 1000 60))]
+          [accepted
+           {:try-again-in try-again-in
+            :time-span time-span
+            :time-offset time-offset
+            }
+           (format "%s; cannot create session for future updates, try in %d minutes, perfectly good time for a cup of tea :-)" description try-again-in)])
         [ok
          {:expires 0 ;;in Julian TS, 0 never
           :command command
           :description description
-          :range {:from to :to next-to}}
+          :time-span time-span
+          :time-offset time-offset
+          :range {:from to :to nto}}
          "request accepted"]
         ))))
 
