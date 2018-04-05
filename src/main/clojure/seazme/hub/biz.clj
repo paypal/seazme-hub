@@ -54,7 +54,7 @@
                   :id id
                   :key id
                   :created jts
-                  :comment "your app has been sucesfully created"}
+                  :comment "your app has been successfully created"}
         app-cf {:expires 0 ;;in Julian TS, 0 never
                 :description description
                 :bu bu
@@ -115,7 +115,8 @@
   (if-let [app-cf (hb/find-by* "datahub:apps" app-id self-cf-name)]
    (let [id (str (uuid/v1))
          jts (jts-now)
-         session-key (format "%s\\%s" (format "%010x" (jts-now)) id);;should be good till "2525-06-07T12:18:37.938Z" TODO "1620c70b81f\\0699"
+         session-ts (format "%010x" (jts-now));;should be good till "2525-06-07T12:18:37.938Z" TODO "1620c70b81f\\0699"
+         session-key (format "%s\\%s" session-ts id)
          kind (:kind app-cf)
          past-sessions  (delay (->> (hb/scan* "datahub:intake-sessions" :reverse? true :lazy? true)
                                     (filter (comp (partial = app-id) :id :meta :app second))
@@ -125,6 +126,7 @@
          session-meta {:headers headers
                        :id id
                        :key session-key
+                       :ts session-ts
                        :created jts
                        :comment comment2
                        :action "request"}]
@@ -159,9 +161,10 @@
       (let [path (get-path-from-doc (-> app-cf :kind) payload);;TODO verify path
             jts (jts-now)
             session-id (-> self-cf :meta :id)
+            session-ts (-> self-cf :meta :ts)
             document-key (format "%02x\\%s\\%s" (rand-int 256) session-id path) ;;256 is hardcoded constant forever!
             document-meta {:headers headers
-                           :session {:id session-id :key session-key}
+                           :session {:id session-id :key session-key :ts session-ts}
                            :key document-key
                            :created jts
                            :comment "the document has been posted"}]
@@ -181,10 +184,12 @@
       (let [action "cancel"
             jts (jts-now)
             session-id (-> self-cf :meta :id)
+            session-ts (-> self-cf :meta :ts)
             session-action-key (format "%s\\%s" session-key action)
             session-meta {:headers headers
                           :id session-id
                           :key session-action-key
+                          :ts session-ts
                           :created jts
                           :comment "the session has been canceled"
                           :action action}]
@@ -205,11 +210,12 @@
       (let [action "submit"
             jts (jts-now)
             session-id (-> self-cf :meta :id)
+            session-ts (-> self-cf :meta :ts)
             session-action-key (format "%s\\%s" session-key action)
             session-meta {:headers headers
                           :id session-id
                           :key session-action-key
-                          :created jts
+                          :created jts;;TODO consider storing initial/submitted TS as well
                           :comment "the session has been submitted"
                           :action action}]
         (hb/store* "datahub:intake-sessions" session-action-key self-cf-name (assoc self-cf :count count2 :meta session-meta))
