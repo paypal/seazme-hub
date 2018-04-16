@@ -10,6 +10,7 @@
  :configuration
  {:hbase {
           "hbase.client.retries.number" "1"
+          "hbase.client.scanner.timeout.period" "1800000"
           "zookeeper.session.timeout" "1000"
           "zookeeper.recovery.retry" "1"
           "hbase.zookeeper.property.clientPort" "2181"
