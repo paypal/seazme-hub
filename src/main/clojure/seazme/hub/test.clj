@@ -1,5 +1,5 @@
 (ns seazme.hub.test
-  (:require [ring.util.http-response :refer [ok not-found]]
+  (:require [ring.util.http-response :refer [ok not-found accepted]]
             [clj-uuid :as uuid]
             [clojure.tools.logging :as log]
             [clj-time.format :as tf]
@@ -31,9 +31,18 @@
   (ok {:id (str (uuid/v4)) :comment wip})
   )
 
-(defn POST-intake-sessions[op headers app-id command description]
-  (log/info op headers app-id command description)
-  (ok {:key (str (uuid/v4)) :expires 0 :command command :comment wip :range {:from 0 :to (te/to-long (tr/now))}})
+(let [counter (atom 0)]
+  (defn POST-intake-sessions[op headers app-id command description]
+    (log/info op headers app-id command description)
+    (swap! counter inc)
+    (condp = command
+      "scan" (ok {:key (str (uuid/v4)) :expires 0 :command command :comment "simulating 200" :range {:from 0 :to (te/to-long (tr/now))}})
+      "update" (if (= 0 (mod @counter 3))
+                 (accepted {:comment "simulating 202"})
+                 (ok {:key (str (uuid/v4)) :expires 0 :command command :comment wip :range {:from (- (te/to-long (tr/now)) (* 1000 60 10)):to (te/to-long (tr/now))}})
+                 )
+      (not-found {:comment (str "command:" command " is invalid")})))
+
   )
 
 (defn POST-intake-sessions-_-document[op headers session-id payload]

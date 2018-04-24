@@ -1,3 +1,4 @@
+;;TODO replace datahubserv with hub or seazmehub, also in clients
 (defproject datahubserv "0.8.1"
   :description "DataHub"
   :dependencies [[org.clojure/clojure "1.8.0"]
