@@ -32,12 +32,15 @@ intake-data: ;fast scan by session (or session with 00-FF(or higer) prefix for b
       app: <copy-of-apps>
       session: <copy-of-session>
 
+datahub:
+  reversed-jira-id: ;fast lookup by jira-id
+      hive: <mapping-based-transfomation-of-payload>
+      datahub: id, key updated, status, meta, payload
+
+datahub:datahub:snapshot-update-log
+  <:prefix>-<(format "%011x" (bit-not created))> ;fast reverse scan by prefix
+      self: app2scan, app2update, meta
 #+END_SRC
-
-upload-sessions:
-
-upload-snapshots: (instead of es , es target qualifier)
-
 
 * Scripts
 
@@ -52,7 +55,16 @@ truncate 'datahub:intake-sessions'
 truncate 'datahub:intake-data'
 
 count 'datahub:intake-data', INTERVAL => 1000000
+$ hbase org.apache.hadoop.hbase.mapreduce.RowCounter "datahub:intake-data"
 scan 'datahub:intake-data', {'LIMIT' => 5}
+scan 'datahub:intake-data', {COLUMNS => 'self:meta', STARTROW => "<2dig-hex-prefix>\\<session-id>", 'LIMIT' => 5}
+
+describe "datahub:snapshot-data"
+scan 'datahub:snapshot-data', {'LIMIT' => 5}
+scan 'datahub:snapshot-data', {COLUMNS => 'hive', 'LIMIT' => 2}
+scan 'datahub:snapshot-data', {COLUMNS => '<CF>:<mapped-field>', 'LIMIT' => 50}
+get 'datahub:snapshot-data', '1234567'.reverse! # the key should be reversed
+deleteall 'datahub:snapshot-data', '1234567'.reverse! # the key should be reversed
 
 disable 'datahub:intake-sessions'
 enable 'datahub:intake-sessions'
@@ -68,6 +80,11 @@ create 'datahub:apps', 'self'
 create 'datahub:intake-sessions', 'self', 'app'
 create 'datahub:intake-data', 'self', 'app', 'session'
 
+create 'datahub:snapshot-data', 'datahub', 'hive'
+create 'datahub:snapshot-update-log', 'self'
+count 'datahub:snapshot-update-log', INTERVAL=> 1
+
+alter 'datahub:<table>', '<new CF>'
 
 print "rename datahub:intake-sessions\n"
 disable 'datahub:intake-sessions'
