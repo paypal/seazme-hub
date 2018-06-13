@@ -59,6 +59,10 @@ truncate 'datahub:intake-data'
 count 'datahub:intake-data', INTERVAL => 1000000
 scan 'datahub:intake-data', {'LIMIT' => 5}
 
+describe "datahub:snapshot-data"
+scan 'datahub:snapshot-data', {'LIMIT' => 5}
+scan 'datahub:snapshot-data', {COLUMNS => 'self:JiraId', 'LIMIT' => 50}
+
 disable 'datahub:intake-sessions'
 enable 'datahub:intake-sessions'
 disable 'datahub:intake-data'
@@ -73,6 +77,10 @@ create 'datahub:apps', 'self'
 create 'datahub:intake-sessions', 'self', 'app'
 create 'datahub:intake-data', 'self', 'app', 'session'
 
+create 'datahub:snapshot-data', 'self'
+create 'datahub:snapshot-update-log', 'self'
+
+alter 'datahub:snapshot-data', 'jirappmain'
 
 print "rename datahub:intake-sessions\n"
 disable 'datahub:intake-sessions'
