@@ -150,6 +150,7 @@
     "answerhub" (format "%d\\%d" (-> payload :c_id) (-> payload :c_originalparent))
     "jira" (format "%s" (-> payload :id))
     "snow" (format "%s" (-> payload :number))
+    "circlehd" (format "%s" (-> payload :media_id))
     ))
 
 
