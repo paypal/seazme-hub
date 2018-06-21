@@ -149,8 +149,8 @@
 ;;TODO check for \\ in the input of course
 ;;TODO factor in version of the source as well
 ;;TODO move that to config
-(defn get-path-from-doc[app-id payload]
-  (case app-id
+(defn get-path-from-doc[app-kind payload]
+  (case app-kind
     "twiki" (format "%s\\%s" (-> payload :web) (-> payload :topic))
     "confluence" (format "%d\\%s" (-> payload :space :id) (-> payload :id))
     "answerhub" (format "%d\\%d" (-> payload :c_id) (-> payload :c_originalparent))
