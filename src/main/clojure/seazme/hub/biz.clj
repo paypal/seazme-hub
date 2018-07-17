@@ -151,7 +151,9 @@
     "jira" (format "%s" (-> payload :id))
     "snow" (format "%s" (-> payload :number))
     "circlehd" (format "%s" (-> payload :media_id))
+    nil
     ))
+;;TODO block \ and mayby /
 
 
 (defn POST-intake-sessions-_-document[op headers session-key payload]
@@ -160,20 +162,21 @@
   ;;TODO check if cancel/submit and/or expired
   (if-let [self-cf (hb/find-by* "datahub:intake-sessions" session-key self-cf-name)]
     (if-let [app-cf (hb/find-by* "datahub:intake-sessions" session-key app-cf-name)]
-      (let [path (get-path-from-doc (-> app-cf :kind) payload);;TODO verify path
-            jts (jts-now)
-            session-id (-> self-cf :meta :id)
-            session-tsx (-> self-cf :meta :tsx)
-            document-key (format "%02x\\%s\\%s" (rand-int 256) session-id path) ;;256 is hardcoded constant forever!
-            document-meta {:headers headers
-                           :session {:id session-id :key session-key :tsx session-tsx}
-                           :key document-key
-                           :created jts
-                           :comment "the document has been posted"}]
-        (log/info op self-cf app-cf path document-key)
-        (hb/store* "datahub:intake-data" document-key self-cf-name {:payload payload :type "document" :meta document-meta})
-        (hb/store* "datahub:intake-data" document-key app-cf-name app-cf)
-        (ok (select-keys document-meta [:comment])))
+      (if-let [path (get-path-from-doc (-> app-cf :kind) payload)];;TODO verify path
+        (let [jts (jts-now)
+              session-id (-> self-cf :meta :id)
+              session-tsx (-> self-cf :meta :tsx)
+              document-key (format "%02x\\%s\\%s" (rand-int 256) session-id path) ;;256 is hardcoded constant forever!
+              document-meta {:headers headers
+                             :session {:id session-id :key session-key :tsx session-tsx}
+                             :key document-key
+                             :created jts
+                             :comment "the document has been posted"}]
+          (log/info op self-cf app-cf path document-key)
+          (hb/store* "datahub:intake-data" document-key self-cf-name {:payload payload :type "document" :meta document-meta})
+          (hb/store* "datahub:intake-data" document-key app-cf-name app-cf)
+          (ok (select-keys document-meta [:comment])))
+        (not-found {:comment "kind not found"}))
       (not-found {:comment "app not found"}))
     (not-found {:comment "self not found"}))
   )
