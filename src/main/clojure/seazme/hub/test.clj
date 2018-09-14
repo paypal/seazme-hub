@@ -16,6 +16,17 @@
 
 (defn hashed-passwords[] #{(d/sha-1 (str "Basic " (encode-base64 "open:seazme")))})
 
+(defn sso-config[] nil)
+; :sso {:app-name "<entity>"
+;       :base-uri "<url>"
+;       :idp-uri "https://sso.paypalcorp.com/idp/SSO.saml2"
+;       :idp-cert "<cert>"
+;       :keystore-file "keystore.jks"
+;       :keystore-password "<password>"
+;       :key-alias "<alias>"
+;       }
+
+
 (defn status[op headers]
   (log/info op headers)
   (ok
@@ -23,6 +34,11 @@
     :load-average "tmp"
     :comment (str wip " for " headers)}
    )
+  )
+
+(defn GET-applications-apikey[op headers session]
+  (log/info op headers session)
+  (ok {:apikey wip :comment wip})
   )
 
 ;;TODO update description and seq diagrams

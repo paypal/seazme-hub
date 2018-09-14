@@ -4,8 +4,10 @@
 
 ;;https://github.com/derekchiang/Clojure-Watch for credentials
 (def app (a/mk-app
+          (service/sso-config)
           (service/hashed-passwords)
           {:status service/status
+           :GET-applications-apikey service/GET-applications-apikey
            :POST-applications-intake service/POST-applications-intake
            :POST-intake-sessions service/POST-intake-sessions
            :POST-intake-sessions-_-document service/POST-intake-sessions-_-document

@@ -5,10 +5,16 @@
 - Git
 - Most recent Java 8 JDK
 - *[[https://leiningen.org][Leiningen]]* Clojure build tool
+- For custom versions of =saml20-clj=, please install them locally with =lein install=
 
 *** Demo
 
 This repo maintains an =api= branch which when checked out, and started (as below), runs hub in demo mode and no calls to backend are executed. Username and password are =open= and =seazme=.
+
+A convenient way to generate credential hash:
+#+BEGIN_SRC
+echo -n 'open:seazme' | openssl base64 | sed -e 's/^/Basic /' | tr -d '\n' | shasum
+#+END_SRC
 
 Please note, that in order to achieve that level of separation, all api changes must be carefully placed on top of =api= branch. Then =master= branch must be rebased on top of it.
 
