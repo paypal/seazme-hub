@@ -4,16 +4,20 @@
             [schema.core :as s]
             [clj-time.coerce :as co]
             [ring.logger :as logger]
+            [saml20-clj.routes :as sr]
+            [ring.middleware.session :refer :all]
+            [ring.middleware.params :refer :all]
+            [clojure.string :as str]
             [digest :as d]))
 
 ;;(s/defschema Total {:id String (s/optional-key :total) Long :comment String})
 (s/defschema UpdateRange {:from Long :to Long})
 
-
 ;;TODO convert to "(resource" https://github.com/metosin/compojure-api-examples/blob/master/src/compojure/api/examples/handler.clj vs https://github.com/metosin/compojure-api/blob/master/examples/resources/src/example/handler.clj
 
 ;;TODO define , :id #"[0-9]+"
 ;;TODO https://stackoverflow.com/questions/46288109/how-to-stream-a-large-csv-response-from-a-compojure-api-so-that-the-whole-respon
+;;TODO WARN Not all child routes satisfy compojure.api.routing/Routing. {:path nil, :method nil}, invalid child routes:
 
 (def wip "wip: API response may not be fully defined yet")
 
@@ -21,26 +25,31 @@
 
 (defmacro mk-datahub-handler [cm op & args] `(fn [~'req] (-> ~cm ~op (apply ~op (select-keys (~'req :headers) ["apikey" "x-real-ip"]) ~@args nil))))
 
-(defn authorized-for-docs? [hashed-passwords handler]
+;; In ring middleware, "The root cause here is that in Compojure, the routing tree is an application where the middleware are applied in-place - there is no good way to delay the computation to see if the route will eventually match.", hence manual check. `reroute-middleware` might work better.
+(defn wrap-auth[sso-config hashed-passwords handler]
   (fn [request]
-    (let [auth-header (get (:headers request) "authorization")]
+    (let [uri (request :uri)
+          nop-fn #(handler request)
+          sso-fn #(if (-> request :session :saml nil?) (sr/redirect-to-saml "/") (nop-fn))
+          sso-or-nop-fn #(if (nil? sso-config) (nop-fn) (sso-fn))
+          basic-auth-fn #(let [auth-header (get (:headers request) "authorization")]
+                           (cond
+                             (nil? auth-header) (-> (unauthorized) (header "WWW-Authenticate" "Basic realm=\"whatever\""))
+                             (contains? hashed-passwords (d/sha-1 auth-header)) (nop-fn)
+                             :else (unauthorized {})))]
       (cond
-        (nil? auth-header)
-        (-> (unauthorized)
-            (header "WWW-Authenticate" "Basic realm=\"whatever\""))
-
-        (contains? hashed-passwords (d/sha-1 auth-header))
-        (handler request)
-
-        :else
-        (unauthorized {})))))
+        (str/starts-with? uri "/v1/datahub/applications/apikey") (sso-or-nop-fn)
+        (str/starts-with? uri "/saml") (nop-fn)
+        (str/starts-with? uri "/v1") (basic-auth-fn)
+        :else (sso-or-nop-fn)))))
 
 ;consider instead of comment
 ;;"errors": {
 ;;           "id": "missing-required-key"
 ;;           }
 
-(defn handler[hashed-passwords cm]
+
+(defn handler[sso-config cm]
   (api
    {:swagger
     {:ui "/"
@@ -55,21 +64,22 @@
             :securityDefinitions {:BasicAuth
                                   {:type "basic"}}}}}
 
+   (when sso-config (sr/saml-routes sso-config))
+
    (context "/v1" []
             (context "/datahub" []
-                     (GET "/applications/apikey" []
+                     (GET "/applications/apikey" {session :session}
                           :tags [:access]
                           :query-params [name :- String, contacts :- String, description :- String]
                           ;;contacts is structures list of email,SMS,Slack,etc
                           :return {:apikey String :comment String}
-                          :summary "This is experimental: generates API basic auth (or other) key after completing SSO (PP, Google, FB, etc) based authetication. Otherwise, apikey are provisioned manually."
-                          (ok {:apikey wip :comment wip}))
+                          :summary "Generates API key (which could replace Basic Auth in feature) after completing SSO SAML 2.0 based authetication."
+                          (mk-datahub-handler cm :GET-applications-apikey session))
                      )
             )
    ;;TODO difference between [:r :- String] and {:r String}
    (context "/v1" [:as rr]
             :header-params [apikey :- String]
-            :middleware [(partial authorized-for-docs? hashed-passwords)]
             (context "/datahub" []
                      (POST "/applications/intake" []
                            :tags [:access :intake]
@@ -144,4 +154,5 @@
                           (ok {:comment wip}))
                      ))))
 
-(defn mk-app[hashed-passwords callbacks-map] (-> (handler hashed-passwords callbacks-map) logger/wrap-with-logger))
+(defn mk-app[sso-config hashed-passwords callbacks-map]
+  (->> (handler sso-config callbacks-map) (wrap-auth sso-config hashed-passwords) wrap-params wrap-session logger/wrap-with-logger))

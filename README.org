@@ -5,6 +5,7 @@
 - Git
 - Most recent Java 8 JDK
 - *[[https://leiningen.org][Leiningen]]* Clojure build tool
+- For custom versions of =saml20-clj=, please install them locally with =lein install=
 
 *** Demo
 

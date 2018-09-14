@@ -8,6 +8,7 @@
                  ;;[clojusc/friend-oauth2 "0.2.0"]
                  [metosin/compojure-api "1.1.11"]
                  [digest "1.4.4"]
+                 [saml20-clj "0.1.3"]
                  ]
   :ring {:handler seazme.hub.main/app}
   :source-paths ["src/main/clojure"]
