@@ -61,7 +61,7 @@
                           :tags [:access]
                           :query-params [name :- String, contacts :- String, description :- String]
                           ;;contacts is structures list of email,SMS,Slack,etc
-                          :return {:id String :comment String}
+                          :return {:apikey String :comment String}
                           :summary "This is experimental: generates API basic auth (or other) key after completing SSO (PP, Google, FB, etc) based authetication. Otherwise, apikey are provisioned manually."
                           (ok {:apikey wip :comment wip}))
                      )
