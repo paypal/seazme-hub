@@ -122,7 +122,7 @@
   (if-let [app-cf (hb/find-by* "datahub:apps" app-id self-cf-name)]
    (let [id (str (uuid/v1))
          jts (jts-now)
-         session-tsx (format "%011x" (jts-now));;will be good till "2525-06-07T12:18:37.938Z"
+         session-tsx (format "%011x" jts);;will be good till "2525-06-07T12:18:37.938Z"
          session-key (format "%s\\%s" session-tsx id)
          kind (:kind app-cf)
          past-sessions  (delay (->> (hb/scan* "datahub:intake-sessions" :reverse? true :lazy? true)
