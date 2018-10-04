@@ -6,7 +6,7 @@ datahub is aware of the source data type (e.g. Confluence, GitHub, etc), however
 
 In most cases, it is not possible to scan entire source at once and push the content in a single POST. Therefore, SQL like transaction model is followed where we PUT begin/insert/commit/rollback statements as resources for datahub to perform. In other words datahub's API models data intake process as opposed to simple ducuments upload capability.
 
-The datahub design follows "never delete" and "never update" http://www.datomic.com like paradim. Instead of meticulusly maintaining the "current" info, data is stored as a chain of "intake" events and transactions and all subsequent processing will be taken from there. That enables flexibility and openess for future changes as well.
+The datahub design follows "never delete" and "never update" http://www.datomic.com like paradigm. Instead of meticulusly maintaining the "current" info, data is stored as a chain of "intake" events and transactions and all subsequent processing will be taken from there. That enables flexibility and openess for future changes as well.
 
 Main actors in the system:
    [[/docs/arch.png]]
