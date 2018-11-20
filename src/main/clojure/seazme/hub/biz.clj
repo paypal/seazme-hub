@@ -13,7 +13,7 @@
 (def app-cf-name :app)
 (def self-cf-name :self)
 
-(def time-span   (* 1000 60 60 24))
+(def time-span   (* 1000 60 60 3))
 (def time-offset (* 1000 60 15))
 (defn next-to[to] (* (quot (+ to time-span) time-span) time-span))
 
@@ -84,7 +84,7 @@
    {:expires 0 ;;in Julian TS, 0 never
     :command command
     :description description
-    :range {:from 0 :to jts}}
+    :range {:from 0 :to (- jts (* time-span 8 2))}} ;; leave 48h margin, it is assumed that subsequent update will determine if scan was performed and pick right continuation
    "request accepted"])
 
 
