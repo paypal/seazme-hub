@@ -87,6 +87,13 @@
     :range {:from 0 :to (- jts (* time-span 8 2))}} ;; leave 48h margin, it is assumed that subsequent update will determine if scan was performed and pick right continuation
    "request accepted"])
 
+(defmethod POST-intake-sessions-handler "patch" [jts command description past-sessions]
+  [ok
+   {:expires 0 ;;in Julian TS, 0 never
+    :command command
+    :description description
+    :range {:from -1 :to -1}}
+   "request accepted"])
 
 (defmethod POST-intake-sessions-handler "update" [jts command description past-sessions]
   ;;reset-content - too early
@@ -126,6 +133,7 @@
          session-key (format "%s\\%s" session-tsx id)
          kind (:kind app-cf)
          past-sessions  (delay (->> (hb/scan* "datahub:intake-sessions" :reverse? true :lazy? true)
+                                    (remove (comp (partial = "patch") :command :self second))
                                     (filter (comp (partial = app-id) :id :meta :app second))
                                     (filter (comp (partial = kind) :kind :app second));;this is redundant check since app-id must match kind as well
                                     (filter (comp (partial = "submit") :action :meta :self second))))
