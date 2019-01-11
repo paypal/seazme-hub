@@ -23,7 +23,7 @@ apps: ;list of all integrations
 
 intake-sessions: ;fast scan by time
   ts/uuid(|/submit|/cancel):
-      self: expires, command:scan/update, ?count (for submit), description, time-span, time-offset, range, <meta>
+      self: expires, command:scan/update/patch, ?count (for submit), description, time-span, time-offset, range, <meta>
       app: <copy-of-apps>
 
 intake-data: ;fast scan by session (or session with 00-FF(or higer) prefix for better use of regions)
