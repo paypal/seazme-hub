@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+lein do clean, ring uberjar
+
+sha1=`git rev-parse HEAD`
+branch=$(git rev-parse --abbrev-ref HEAD)
+cp target/datahubserv.jar seazme-hub.$branch.${sha1:0:8}.`date '+%Y-%m-%d'`.jar
