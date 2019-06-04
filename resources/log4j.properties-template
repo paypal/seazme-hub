@@ -1,5 +1,5 @@
 # Application Logging
-log4j.rootLogger=info, console, logrolling, email
+log4j.rootLogger=info, console, logrolling#, email
 
 log4j.appender.logrolling=org.apache.log4j.RollingFileAppender
 log4j.appender.logrolling.File=./logrolling.out
