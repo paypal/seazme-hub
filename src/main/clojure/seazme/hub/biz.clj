@@ -209,6 +209,7 @@
                           :id session-id
                           :key session-action-key
                           :tsx session-tsx
+                          :initiated (-> self-cf :meta :created)
                           :created jts
                           :comment "the session has been canceled"
                           :action action}]
@@ -235,7 +236,8 @@
                           :id session-id
                           :key session-action-key
                           :tsx session-tsx
-                          :created jts;;TODO consider storing initial/submitted TS as well
+                          :initiated (-> self-cf :meta :created)
+                          :created jts
                           :comment "the session has been submitted"
                           :action action}]
         (hb/store* "datahub:intake-sessions" session-action-key self-cf-name (assoc self-cf :count count2 :meta session-meta))
