@@ -14,6 +14,7 @@
 (def self-cf-name :self)
 
 (def time-span   (* 1000 60 60 3))
+(def time-span-4days (* 1000 60 60 24 4)) ;;has to be a multiple of time-span
 (def time-offset (* 1000 60 15))
 (defn next-to[to] (* (quot (+ to time-span) time-span) time-span))
 
@@ -84,7 +85,7 @@
    {:expires 0 ;;in Julian TS, 0 never
     :command command
     :description description
-    :range {:from 0 :to (- jts (* time-span 8 2))}} ;; leave 48h margin, it is assumed that subsequent update will determine if scan was performed and pick right continuation
+    :range {:from 0 :to (- (next-to jts) time-span-4days)}} ;; leave 4 days margin, it is assumed that subsequent update will determine if scan was performed and pick right continuation
    "request accepted"])
 
 (defmethod POST-intake-sessions-handler "patch" [jts command description past-sessions]
